@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>IEP Team Trivia Quiz</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 30px; }
+.container { max-width: 800px; margin: 0 auto; }
+.header { text-align: center; color: white; margin-bottom: 30px; }
+.header h1 { font-size: 32px; margin-bottom: 8px; }
+.header p { font-size: 16px; opacity: 0.9; }
+.score-bar { background: rgba(255,255,255,0.15); border-radius: 12px; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; color: white; margin-bottom: 20px; font-size: 14px; }
+.score-bar .progress { font-weight: 600; }
+.timer-display { font-size: 13px; opacity: 0.9; }
+.card { background: white; border-radius: 16px; padding: 32px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); margin-bottom: 20px; }
+.question-num { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 8px; }
+.question { font-size: 18px; font-weight: 600; color: #2d2d2d; margin-bottom: 24px; line-height: 1.5; }
+.options { display: flex; flex-direction: column; gap: 12px; }
+.option { padding: 14px 20px; border: 2px solid #e8e8e8; border-radius: 10px; cursor: pointer; transition: all 0.2s; font-size: 15px; color: #333; }
+.option:hover { border-color: #667eea; background: #f8f7ff; }
+.option.correct { border-color: #2ecc71; background: #e8faf0; color: #1a7a4c; font-weight: 600; }
+.option.wrong { border-color: #e74c3c; background: #fef0f0; color: #c0392b; }
+.option.disabled { pointer-events: none; opacity: 0.7; }
+.btn { display: inline-block; padding: 12px 28px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: transform 0.1s; }
+.btn:hover { transform: scale(1.02); }
+.btn-row { text-align: right; margin-top: 20px; }
+.feedback { margin-top: 16px; padding: 12px 16px; border-radius: 8px; font-size: 14px; line-height: 1.5; }
+.feedback.correct { background: #e8faf0; color: #1a7a4c; border-left: 4px solid #2ecc71; }
+.feedback.wrong { background: #fef0f0; color: #c0392b; border-left: 4px solid #e74c3c; }
+.hidden { display: none; }
+/* Name entry */
+.name-input { width: 100%; padding: 14px 20px; border: 2px solid #e8e8e8; border-radius: 10px; font-size: 16px; font-family: 'Segoe UI', sans-serif; margin-bottom: 16px; }
+.name-input:focus { outline: none; border-color: #667eea; }
+/* Answer tracker */
+.tracker { margin-top: 24px; border-top: 1px solid #eee; padding-top: 20px; }
+.tracker h3 { font-size: 14px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+.tracker-item { padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; font-size: 13px; line-height: 1.5; }
+.tracker-item.correct { background: #f0faf5; border-left: 3px solid #2ecc71; }
+.tracker-item.wrong { background: #fef8f8; border-left: 3px solid #e74c3c; }
+.tracker-item .q-label { font-weight: 600; color: #444; }
+.tracker-item .correction { color: #c0392b; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<h1>🧠 IEP Team Trivia</h1>
+<p>How well do you know our teams? 34 questions across all IEP pillars!</p>
+</div>
+<!-- NAME ENTRY -->
+<div class="card" id="name-card">
+<div class="question-num">Welcome!</div>
+<div class="question">Enter your name to start the quiz</div>
+<input type="text" class="name-input" id="player-name" placeholder="Your name..." onkeydown="if(event.key==='Enter'){event.preventDefault();startQuiz();}">
+<div class="btn-row"><button class="btn" onclick="startQuiz()">Start Quiz →</button></div>
+</div>
+
+<!-- QUIZ -->
+<div class="hidden" id="quiz-section">
+<div class="score-bar">
+<span class="progress" id="progress">Question 1 / 30</span>
+<span class="timer-display" id="timer-display">⏱️ 0s</span>
+<span id="score-display">Score: 0</span>
+</div>
+<div class="card" id="quiz-card">
+<div class="question-num" id="q-num">Question 1</div>
+<div class="question" id="q-text"></div>
+<div class="options" id="options"></div>
+<div class="feedback hidden" id="feedback"></div>
+<div class="btn-row"><button class="btn hidden" id="next-btn" onclick="nextQuestion()">Next →</button></div>
+</div>
+<!-- ANSWER TRACKER -->
+<div class="card" id="tracker-card">
+<div class="tracker">
+<h3>📋 Your Answers</h3>
+<div id="tracker-list"></div>
+</div>
+</div>
+</div>
+
+<!-- RESULTS -->
+<div class="card hidden" id="results-card">
+<div style="text-align:center;">
+<h2 style="font-size:28px; color:#4a2d6b; margin-bottom:20px;">🎉 Quiz Complete!</h2>
+<div style="font-size:48px; font-weight:700; color:#667eea; margin:20px 0;" id="final-score"></div>
+<div style="font-size:16px; color:#555; margin-bottom:8px;" id="final-message"></div>
+<div style="font-size:14px; color:#888; margin-bottom:24px;" id="final-time"></div>
+<button class="btn" onclick="finishAndShowLeaderboard()">See Leaderboard →</button>
+<button class="btn" style="background:linear-gradient(135deg,#2ecc71,#27ae60); margin-left:10px;" onclick="newPlayer()">Next Player →</button>
+</div>
+<!-- Individual tracker summary -->
+<div class="tracker" style="margin-top:30px;">
+<h3>📋 Your Answer Summary</h3>
+<div id="results-tracker"></div>
+</div>
+</div>
+
+<!-- LEADERBOARD -->
+<div class="card hidden" id="leaderboard-card">
+<div style="text-align:center; margin-bottom:24px;">
+<h2 style="font-size:24px; color:#4a2d6b;">🏆 Leaderboard</h2>
+<p style="font-size:14px; color:#888; margin-top:6px;">Top performers across all players</p>
+</div>
+<div id="leaderboard-content"></div>
+<div class="btn-row" style="text-align:center; margin-top:24px;">
+<button class="btn" onclick="newPlayer()">Next Player →</button>
+<button class="btn" style="background:linear-gradient(135deg,#e74c3c,#c0392b); margin-left:10px;" onclick="resetAll()">Reset All</button>
+</div>
+</div>
+</div>
+<script>
+const questions = [
+// SCE - 4 questions
+{q:"Which team validated the HAJ8 NCA fishbone layout and staffing model and identified a possibility to reduce finger length?", a:"Simulations & Capacity Expansion", o:["Engineering Technology Solutions","Simulations & Capacity Expansion","Operations Engineering","Program Implementation"], ctx:"SCE delivered the HAJ8 NCA simulation validating a fishbone layout at 1,300 PPH, defining optimal staffing (22 HC peak / 4 HC non-peak), recommending 9.5m finger length (vs 11.5m), and projecting $4.2M entitlement from go-live 2026."},
+{q:"PACED v2.0 achieved a 98% reduction in human effort to compute walking distances from CAD drawings using Neural Networks. Which team developed it?", a:"Simulations & Capacity Expansion", o:["Engineering Technology Solutions","Operations Engineering","Simulations & Capacity Expansion","International Programs Planning"], ctx:"SCE developed PACED v2.0, transitioning from manual Spaghetti Diagrams to an autonomous Network Graph Engine using Neural Networks and Dijkstra's Algorithm, handling 10,000+ Origin-Destination pairs vs. v1.0's 20-path limit."},
+{q:"Which team is responsible for ensuring SHIELD is the single source of truth for the BRS lifecycle?", a:"Simulations & Capacity Expansion", o:["International Programs Planning","Process Standardization & Strategy","Simulations & Capacity Expansion","Engineering Solutions & Pre-Execution"], ctx:"SCE's BRS & Strategy pillar manages the full BRS lifecycle in SHIELD, including stage approvals, design rates, and governance — issuing process reminders that all planning inputs must be reflected exclusively in SHIELD."},
+{q:"The Dune Retrofit Tool validated at 96-100% accuracy across BER8, STN8, SXW2 belongs to which team?", a:"Simulations & Capacity Expansion", o:["Engineering Technology Solutions","Simulations & Capacity Expansion","International Programs Planning","Engineering Solutions & Pre-Execution"], ctx:"SCE validated the Dune Retrofit Tool showing 96-100% accuracy, applicable to 75% of 200+ planned retrofit projects. The tool compares current and proposed configurations through parallel simulations."},
+// ETS - 4 questions
+{q:"The CORGI deployment and Facer Automation LTM5 endorsement are tracked under which team?", a:"Engineering Technology Solutions", o:["Engineering Technology Solutions","Engineering Standardisation Programs","Outbound Automation & Container Program","Operations Engineering"], ctx:"ETS drives 19 projects targeting 13 Alpha completions in 2026 with $20MM combined entitlement. CORGI is progressing to Beta with LYS8 Warden live detecting 2,000+ defects, and Facer Automation secured LTM5 endorsement."},
+{q:"The Ratchet Bar Safety project targeting full network deployment in Q3 belongs to which team?", a:"Engineering Technology Solutions", o:["Engineering Standardisation Programs","Sustainability","Engineering Technology Solutions","Program Implementation"], ctx:"ETS completed the Ratchet Bar Safety Alpha milestone, with engineering development covering ~80% of network ratchet bar types, targeting Q3 for full network deployment."},
+{q:"Which team is developing the Gentle Tipper and Liftliner Tugger Train?", a:"Engineering Technology Solutions", o:["Engineering Technology Solutions","Outbound Automation & Container Program","Engineering Standardisation Programs","Operations Engineering"], ctx:"ETS develops new MHE technologies from concept through prototype to validation. Gentle Tipper remains AMBER after FRAX fracture (Gen 1 Comind units rolled back). Liftliner Tugger Train is RED due to Jungheinrich unresponsiveness — GPO escalation targeting WK17."},
+{q:"Which team submitted the First Mile Tote Tipper CAR with a 10-year NPV of +$208.9M?", a:"Engineering Technology Solutions", o:["Engineering Technology Solutions","Outbound Automation & Container Program","Engineering Standardisation Programs","Program Implementation"], ctx:"ETS submitted the first FM CAR for Tote Tipper with 10-year NPV of +$208.9M. The team also designed an internally-developed ratchet bar solution covering ~80% of network types."},
+// IPP - 4 questions
+{q:"Which team secured 0.773M TTP through 3PL lease extensions (PRG9 and MHG9) in Q1?", a:"International Programs Planning", o:["International Programs Planning","Program Implementation","Simulations & Capacity Expansion","Process Standardization & Strategy"], ctx:"IPP delivered 1.58M TTP in Q1 through 1PL launches and 3PL lease renewals — PRG9 (0.395M TTP, 3-year DHL contract) and MHG9 (0.378M TTP, 5-year IDL contract through 2031)."},
+{q:"Which team is responsible for Peak 2026 Max Infra Capacity submission targeting WK27?", a:"International Programs Planning", o:["Simulations & Capacity Expansion","International Programs Planning","Process Standardization & Strategy","Engineering Solutions & Pre-Execution"], ctx:"IPP owns Peak 2026 Max Infra Capacity submission (WK27) with milestones including Highlander release, Capacity & Constraints Calculation (WK18-20), Exception Process (WK22-24), and Leadership approval (WK25-27)."},
+{q:"Which team embedded a dedicated capacity section in the CAR approval template?", a:"International Programs Planning", o:["International Programs Planning","Process Standardization & Strategy","Simulations & Capacity Expansion","Program Implementation"], ctx:"IPP addressed historical gaps in capacity accuracy by embedding a dedicated capacity section in the CAR template to systematically capture retrofit impacts on infrastructure and physical constraints."},
+{q:"Which team is transitioning tactical mech capacity ownership to STEP NCO for weekly refreshes?", a:"International Programs Planning", o:["International Programs Planning","Simulations & Capacity Expansion","Operations Engineering","Process Standardization & Strategy"], ctx:"IPP collaborates with STEP NCO to transition tactical mech capacity ownership, enabling weekly ICE Max Infra Capacity refreshes reflecting actual operating hours and cube changes."},
+// ESPX - 4 questions
+{q:"Which team completed WHS design reviews at 100% in Q1 2026 and collected 88 lessons learned?", a:"Engineering Solutions & Pre-Execution", o:["Operations Engineering","Engineering Solutions & Pre-Execution","Process Standardization & Strategy","Sustainability"], ctx:"ESPX embedded safety into the engineering design lifecycle — WHS are required reviewers at every design gate, and 88 lessons learned were compiled into a phase-based checklist applied to all active design reviews."},
+{q:"Which team translates concepts into buildable execution-ready solutions and manages RFP specs?", a:"Engineering Solutions & Pre-Execution", o:["Operations Engineering","Program Implementation","Engineering Solutions & Pre-Execution","Engineering Technology Solutions"], ctx:"ESPX translates concepts and business demand into buildable execution-ready solutions by integrating engineering design, cost, schedule analytics, and technical governance. All RFP specs updated to current versions (OEQI 02.2026, OEE v4.03, SCADA v1.22)."},
+{q:"Which team supported 23 FM/CF projects and established a biweekly cross-mile engineering cadence?", a:"Engineering Solutions & Pre-Execution", o:["Program Implementation","Engineering Solutions & Pre-Execution","Operations Engineering","International Programs Planning"], ctx:"ESPX supported 23 FM/CF projects, completed designs for IXD2IXD MCI at 6 of 7 sites, and established a biweekly cross-mile engineering cadence to maintain alignment across First Mile and Middle Mile."},
+{q:"Which team rejected a 3:1 merge proposal at BCN8 based on enhanced design criteria from lessons learned?", a:"Engineering Solutions & Pre-Execution", o:["Engineering Solutions & Pre-Execution","Operations Engineering","Engineering Technology Solutions","Program Implementation"], ctx:"ESPX intercepted a 3:1 merge proposal at BCN8 based on enhanced design criteria from lessons learned, and captured missing site standards at LIN8 absent from the vendor design — enabling a simplified retrofit."},
+// Ops Eng - 4 questions
+{q:"Which team tracks OE Punchlist closure and MHE Testing completion for new launches?", a:"Operations Engineering", o:["Engineering Technology Solutions","Program Implementation","Operations Engineering","Engineering Standardisation Programs"], ctx:"Ops Eng tracks execution metrics for launches — FCO8 achieved 100% MHE Testing completion, 87.0% OE FPY (+1607 bps vs target), with an active closure drive for OE Punchlist at 87.1% vs 95% target."},
+{q:"Which team manages the Integrated Project Quality Score (IPQS) and OLT King Pin tracking?", a:"Operations Engineering", o:["Program Implementation","Operations Engineering","Engineering Solutions & Pre-Execution","Process Standardization & Strategy"], ctx:"Ops Eng tracks IPQS with FCO8 achieving 93.4% Overall OE Score (+128 bps vs target), 100% MHE Testing completion, and 87.0% OE FPY (+1607 bps vs target). The 2026 benchmark is 91.0% for NewBuilds and 88.5% for REI."},
+{q:"Which team ensures projects meet quality, safety, and performance standards from execution through go-live?", a:"Operations Engineering", o:["Operations Engineering","Engineering Solutions & Pre-Execution","Program Implementation","Engineering Standardisation Programs"], ctx:"Ops Eng provides technical oversight, risk management, and operational readiness across MM and parts of the FC network — coordinating cross-functional stakeholders and monitoring construction and commissioning."},
+{q:"FCO8 Sort Automation achieved 85.5 TPH Sortable (+11.7% above Finance Plan). Which team tracks this?", a:"Operations Engineering", o:["Operations Engineering","Program Implementation","Simulations & Capacity Expansion","Engineering Technology Solutions"], ctx:"Ops Eng tracks post-launch performance. FCO8 delivered 85.5 TPH (vs 76.5 plan), Jam DPMO 190 (vs 271 target), 93.31% successful diverts, and No Read rate improved from 10.4% to 2.9% by WK15."},
+// ESP - 4 questions
+{q:"Which team owns the development of Amazon's next-generation reusable outbound container?", a:"Engineering Standardisation Programs", o:["Outbound Automation & Container Program","Engineering Standardisation Programs","Process Standardization & Strategy","Engineering Solutions & Pre-Execution"], ctx:"ESP's Global Container Program develops Amazon's next-gen reusable outbound container as one of its four core program areas alongside MHE Compatibility, Engineering Strategy, and SWA Integration."},
+{q:"The Vortivision units deployed at BHX8 (Robin and Artemis stations) are part of which team's scope?", a:"Engineering Standardisation Programs", o:["Engineering Technology Solutions","Engineering Standardisation Programs","Operations Engineering","Outbound Automation & Container Program"], ctx:"ESP's SWA Integration Program deployed two Vortivision units at BHX8, passing all pre-compliance tests and de-risking official certification by NMi Certin B.V. — driving the glidepath to 95% ADWS scan rate across EU."},
+{q:"Which team drives the MHE Compatibility Program through prevention, detection, and protection?", a:"Engineering Standardisation Programs", o:["Engineering Standardisation Programs","Engineering Technology Solutions","Operations Engineering","Sustainability"], ctx:"ESP's MHE Compatibility Program establishes go-to experts for MHE robustness through a three-pillar framework of prevention, detection, and protection — ensuring equipment reliability across the network."},
+{q:"Which team drives comprehensive SWA engineering integration to achieve AFN parity across regions?", a:"Engineering Standardisation Programs", o:["Engineering Standardisation Programs","Process Standardization & Strategy","International Programs Planning","Outbound Automation & Container Program"], ctx:"ESP's SWA Integration Program drives comprehensive SWA engineering integration to achieve AFN parity across regions. EU ADWS scan rate tracking at different stages with UK at 37.01% and Italy at 78.30%."},
+// PI - 4 questions
+{q:"Which team achieved $103M approved YTD CapEx exceeding the $98M yearly goal?", a:"Program Implementation", o:["International Programs Planning","Process Standardization & Strategy","Program Implementation","Simulations & Capacity Expansion"], ctx:"PI teams drive delivery of retrofit solutions connecting business strategy to on-site operations. IEP reached $103M approved YTD (80% of OP2 2026), with Productivity ($52M) as the largest share driven by OBDA ($24M) and EU Loose Load Expansion ($4M)."},
+{q:"The MAD8 Sort Automation project delivering 101,610 in-year labor hours is managed by which team?", a:"Program Implementation", o:["Operations Engineering","Engineering Technology Solutions","Program Implementation","Simulations & Capacity Expansion"], ctx:"PI manages MAD8 Sort Automation — the largest launch in 2026, on track for go-live at Week 43, delivering 101,610 in-year labor hours savings and 0.71 TPH improvement at $24.21M CAPEX."},
+{q:"Which team delivered a 3.15 TPH productivity increase goal by automating manual sites?", a:"Program Implementation", o:["Program Implementation","Simulations & Capacity Expansion","Operations Engineering","Engineering Technology Solutions"], ctx:"PI drives the Engineering Excellence goal: ended Q1 at +0.10 TPH above OP2 target (3.25 vs 3.15), driven by LIN8 IB Upgrade (+0.04 TPH) and Project Voyager (+0.07 TPH). Full portfolio: 498,500 labor hours in savings."},
+{q:"The STN8 Robin Arms delivering 26,887 in-year labor hours is tracked under which team?", a:"Program Implementation", o:["Program Implementation","Engineering Technology Solutions","Operations Engineering","Outbound Automation & Container Program"], ctx:"PI tracks STN8 Robin Arms (6 arms, Phases 1 and 2) generating 26,887 in-year labor hours savings, with a Go-Big initiative of 12 arms scoped for the 2027 roadmap."},
+// OACP - 2 questions
+{q:"Which team manages the Carts 3-year strategy and Vendor Flex pilot?", a:"Outbound Automation & Container Program", o:["Program Implementation","Engineering Standardisation Programs","Outbound Automation & Container Program","International Programs Planning"], ctx:"OACP finalized the Carts 3-year strategy with three critical decisions: no V2.5 injections in 2026, ~164K GC units in 2027, and UK cart height increase to 2m (+7.1% fill rate). Vendor Flex pilot went live WK16 targeting ~$0.25M annualized uplift."},
+{q:"The Fence Line Problem Solving (FLPS) technology for AR sites is owned by which team?", a:"Outbound Automation & Container Program", o:["Engineering Technology Solutions","Simulations & Capacity Expansion","Outbound Automation & Container Program","Operations Engineering"], ctx:"OACP owns FLPS which ejects exception packages onto conveyors along the AR field edge for immediate remediation, delivering $3.1M annual saving opportunity across the AR SC network with 2.1Y average ROI."},
+// Process Standardization & Strategy - 2 questions
+{q:"Which team drives IEP resource planning and Source adoption?", a:"Process Standardization & Strategy", o:["Process Standardization & Strategy","International Programs Planning","Engineering Solutions & Pre-Execution","Program Implementation"], ctx:"Process Standardization & Strategy leads IEP resource planning, Source adoption (4 of 5 metrics trending up, 3 above target), and annual goal setting across various international regions."},
+{q:"The AI Task Force achieving 63.6 weekly average QuickSuite users is tracked under which team?", a:"Operations Engineering", o:["Engineering Technology Solutions","Operations Engineering","Simulations & Capacity Expansion","Engineering Standardisation Programs"], ctx:"Process Standardization & Strategy tracks AI adoption — 63.6 weekly average QuickSuite users across 89 IEP members, 97% AI fundamentals training completion, and a potential reduction of 5.7k hours annually (3.03 FTE)."},
+// Sustainability - 2 questions
+{q:"Which team is influencing stakeholders to secure a go-decision for piloting a timber-based mezzanine platform at DUS2, targeting a 50-70% reduction in embodied carbon and saving over 1,000 tons of CO2e per facility compared to traditional steel?", a:"Sustainability", o:["Engineering Standardisation Programs","Sustainability","Engineering Technology Solutions","Engineering Solutions & Pre-Execution"], ctx:"The MHE Sustainability Cluster's Embodied Carbon pillar is driving the business case for the timber platform pilot at DUS2. Steelwork accounts for 18% of total MHE Scope 3 embodied carbon in Gen10 ARS facilities. Replacing steel with timber (1/3 the weight) delivers 50-70% reduction — equivalent to 1,058 tons CO2e saved per facility. The team is influencing D&C, WHS, Fire Expert, RME, Compliance, Ops Eng to secure approval (Jul 2026) for this first-of-its-kind pilot (2027)."},
+{q:"Which team partnered with McKinsey to validate a full decarbonization glidepath for MHE, identifying 35 levers that can reduce embodied carbon by 70% across 146 planned sites?", a:"Sustainability", o:["Engineering Technology Solutions","Sustainability","Process Standardization & Strategy","International Programs Planning"], ctx:"The MHE Sustainability Cluster's Embodied Carbon pillar partnered with McKinsey to validate a full decarbonization glidepath for the 2027-2030 new build portfolio. The study identified 24 design-for-sustainability levers and 11 procurement levers that reduce accumulated embodied carbon from 992 ktCO2e (BAU) to 297 ktCO2e — a 70% reduction exceeding Amazon's 2030 target by 473 ktCO2e. This $9.3M investment unlocks $44M in material savings across 146 EU and NA sites."}
+];
+
+let allPlayers = [];
+try { allPlayers = JSON.parse(localStorage.getItem('iep_trivia_players') || '[]'); } catch(e) { allPlayers = []; }
+let currentPlayer = '';
+let current = 0;
+let score = 0;
+let answers = [];
+let questionStartTime = 0;
+let quizStartTime = 0;
+let totalTime = 0;
+let questionTimes = [];
+
+function shuffle(arr) {
+  for(let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function startQuiz() {
+  const name = document.getElementById('player-name').value.trim();
+  if(!name) { document.getElementById('player-name').style.borderColor = '#e74c3c'; return; }
+  currentPlayer = name;
+  current = 0;
+  score = 0;
+  answers = [];
+  questionTimes = [];
+  shuffle(questions);
+  quizStartTime = Date.now();
+  document.getElementById('name-card').classList.add('hidden');
+  document.getElementById('quiz-section').classList.remove('hidden');
+  document.getElementById('tracker-list').innerHTML = '';
+  loadQuestion();
+}
+
+function loadQuestion() {
+  const q = questions[current];
+  document.getElementById('q-num').textContent = `Question ${current + 1}`;
+  document.getElementById('q-text').textContent = q.q;
+  document.getElementById('progress').textContent = `Question ${current + 1} / ${questions.length}`;
+  document.getElementById('score-display').textContent = `Score: ${score}`;
+  document.getElementById('feedback').classList.add('hidden');
+  document.getElementById('next-btn').classList.add('hidden');
+  questionStartTime = Date.now();
+  updateTimer();
+  
+  const optionsDiv = document.getElementById('options');
+  optionsDiv.innerHTML = '';
+  const shuffled = shuffle([...q.o]);
+  shuffled.forEach(opt => {
+    const div = document.createElement('div');
+    div.className = 'option';
+    div.textContent = opt;
+    div.onclick = () => selectAnswer(div, opt, q.a, q.q);
+    optionsDiv.appendChild(div);
+  });
+}
+
+let timerInterval;
+function updateTimer() {
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    const elapsed = Math.round((Date.now() - quizStartTime) / 1000);
+    const min = Math.floor(elapsed / 60);
+    const sec = elapsed % 60;
+    document.getElementById('timer-display').textContent = `⏱️ ${min > 0 ? min + 'm ' : ''}${sec}s`;
+  }, 1000);
+}
+
+function selectAnswer(el, selected, correct, questionText) {
+  const timeTaken = (Date.now() - questionStartTime) / 1000;
+  questionTimes.push(timeTaken);
+  
+  const options = document.querySelectorAll('.option');
+  options.forEach(o => {
+    o.classList.add('disabled');
+    if(o.textContent === correct) o.classList.add('correct');
+  });
+  
+  const isCorrect = selected === correct;
+  const ctx = questions[current].ctx;
+  const fb = document.getElementById('feedback');
+  if(isCorrect) {
+    score++;
+    fb.className = 'feedback correct';
+    fb.innerHTML = `✅ Correct! (${timeTaken.toFixed(1)}s)<div style="margin-top:6px; font-size:13px; font-style:italic;">💡 ${ctx}</div>`;
+  } else {
+    el.classList.add('wrong');
+    fb.className = 'feedback wrong';
+    fb.innerHTML = `❌ Incorrect. The answer is: <b>${correct}</b><div style="margin-top:6px; font-size:13px; font-style:italic;">💡 ${ctx}</div>`;
+  }
+  fb.classList.remove('hidden');
+  document.getElementById('score-display').textContent = `Score: ${score}`;
+  document.getElementById('next-btn').classList.remove('hidden');
+  
+  // Track answer
+  answers.push({ q: questionText, selected, correct, isCorrect, time: timeTaken, ctx });
+  addTrackerItem(current + 1, questionText, selected, correct, isCorrect, timeTaken, ctx);
+}
+
+function addTrackerItem(num, questionText, selected, correct, isCorrect, time, ctx) {
+  const list = document.getElementById('tracker-list');
+  const div = document.createElement('div');
+  div.className = `tracker-item ${isCorrect ? 'correct' : 'wrong'}`;
+  if(isCorrect) {
+    div.innerHTML = `<span class="q-label">Q${num}:</span> ✅ ${correct} <span style="color:#888; font-size:12px;">(${time.toFixed(1)}s)</span><div style="color:#555; font-size:12px; margin-top:4px; font-style:italic;">💡 ${ctx}</div>`;
+  } else {
+    div.innerHTML = `<span class="q-label">Q${num}:</span> ❌ You said: ${selected} <span style="color:#888; font-size:12px;">(${time.toFixed(1)}s)</span><div class="correction">→ Correct: <b>${correct}</b></div><div style="color:#555; font-size:12px; margin-top:4px; font-style:italic;">💡 ${ctx}</div>`;
+  }
+  list.prepend(div);
+}
+
+function nextQuestion() {
+  current++;
+  if(current >= questions.length) {
+    showResults();
+  } else {
+    loadQuestion();
+  }
+}
+
+function showResults() {
+  clearInterval(timerInterval);
+  totalTime = (Date.now() - quizStartTime) / 1000;
+  const avgTime = totalTime / questions.length;
+  
+  // Save player result
+  const playerResult = {
+    name: currentPlayer,
+    score: score,
+    total: questions.length,
+    totalTime: totalTime,
+    avgTime: avgTime,
+    answers: answers,
+    timestamp: new Date().toISOString()
+  };
+  allPlayers.push(playerResult);
+  localStorage.setItem('iep_trivia_players', JSON.stringify(allPlayers));
+  
+  // Show results
+  document.getElementById('quiz-section').classList.add('hidden');
+  document.getElementById('results-card').classList.remove('hidden');
+  
+  const pct = Math.round((score / questions.length) * 100);
+  document.getElementById('final-score').textContent = `${score} / ${questions.length} (${pct}%)`;
+  document.getElementById('final-time').textContent = `⏱️ Total time: ${formatTime(totalTime)} | Avg per question: ${avgTime.toFixed(1)}s`;
+  
+  let msg = '';
+  if(pct >= 90) msg = '🏆 IEP Expert! You know the org inside out.';
+  else if(pct >= 70) msg = '🌟 Great job! Solid knowledge across the teams.';
+  else if(pct >= 50) msg = '👍 Not bad! A few more QBRs and you\'ll nail it.';
+  else msg = '📚 Time to review the team scopes — you\'ve got this!';
+  document.getElementById('final-message').textContent = `${currentPlayer} — ${msg}`;
+  
+  // Build answer summary
+  const summaryDiv = document.getElementById('results-tracker');
+  summaryDiv.innerHTML = '';
+  answers.forEach((a, i) => {
+    const div = document.createElement('div');
+    div.className = `tracker-item ${a.isCorrect ? 'correct' : 'wrong'}`;
+    if(a.isCorrect) {
+      div.innerHTML = `<span class="q-label">Q${i+1}:</span> ✅ ${a.correct} <span style="color:#888; font-size:12px;">(${a.time.toFixed(1)}s)</span><div style="color:#555; font-size:12px; margin-top:4px; font-style:italic;">💡 ${a.ctx}</div>`;
+    } else {
+      div.innerHTML = `<span class="q-label">Q${i+1}:</span> ❌ You said: ${a.selected} <span style="color:#888; font-size:12px;">(${a.time.toFixed(1)}s)</span><div class="correction">→ Correct: <b>${a.correct}</b></div><div style="color:#555; font-size:12px; margin-top:4px; font-style:italic;">💡 ${a.ctx}</div>`;
+    }
+    summaryDiv.appendChild(div);
+  });
+}
+
+function formatTime(seconds) {
+  const min = Math.floor(seconds / 60);
+  const sec = Math.round(seconds % 60);
+  return min > 0 ? `${min}m ${sec}s` : `${sec}s`;
+}
+
+function finishAndShowLeaderboard() {
+  document.getElementById('results-card').classList.add('hidden');
+  document.getElementById('leaderboard-card').classList.remove('hidden');
+  renderLeaderboard();
+}
+
+function renderLeaderboard() {
+  const content = document.getElementById('leaderboard-content');
+  if(allPlayers.length === 0) {
+    content.innerHTML = '<p style="text-align:center; color:#888;">No players yet!</p>';
+    return;
+  }
+  
+  // Top 3 by score (tiebreak by time - faster wins)
+  const byScore = [...allPlayers].sort((a, b) => b.score - a.score || a.totalTime - b.totalTime);
+  const top3Score = byScore.slice(0, 3);
+  
+  // Top 3 by speed (minimum 50% correct to qualify)
+  const qualified = allPlayers.filter(p => p.score >= p.total * 0.5);
+  const bySpeed = [...qualified].sort((a, b) => a.avgTime - b.avgTime);
+  const top3Speed = bySpeed.slice(0, 3);
+  
+  const medals = ['🥇', '🥈', '🥉'];
+  
+  let html = '<div style="margin-bottom:24px;">';
+  html += '<h3 style="font-size:16px; color:#4a2d6b; margin-bottom:12px;">🏆 Most Correct Answers</h3>';
+  html += '<table style="width:100%; font-size:14px; border-collapse:separate; border-spacing:0 6px;">';
+  html += '<tr style="color:#888; font-size:12px; text-transform:uppercase;"><td style="padding:4px 12px;">Rank</td><td>Player</td><td>Score</td><td>Time</td><td>Avg/Q</td></tr>';
+  top3Score.forEach((p, i) => {
+    const bg = i === 0 ? '#fff8e6' : i === 1 ? '#f8f8f8' : '#fdf5ef';
+    html += `<tr style="background:${bg}; border-radius:8px;">`;
+    html += `<td style="padding:10px 12px; border-radius:8px 0 0 8px; font-size:20px;">${medals[i]}</td>`;
+    html += `<td style="padding:10px 8px; font-weight:600;">${p.name}</td>`;
+    html += `<td style="padding:10px 8px;">${p.score}/${p.total}</td>`;
+    html += `<td style="padding:10px 8px;">${formatTime(p.totalTime)}</td>`;
+    html += `<td style="padding:10px 12px; border-radius:0 8px 8px 0; color:#888;">${p.avgTime.toFixed(1)}s</td>`;
+    html += '</tr>';
+  });
+  html += '</table></div>';
+  
+  html += '<div>';
+  html += '<h3 style="font-size:16px; color:#4a2d6b; margin-bottom:12px;">⚡ Fastest Responders <span style="font-size:12px; color:#888; font-weight:400;">(min 50% correct to qualify)</span></h3>';
+  if(top3Speed.length === 0) {
+    html += '<p style="color:#888; font-size:13px;">No qualified players yet (need ≥50% correct)</p>';
+  } else {
+    html += '<table style="width:100%; font-size:14px; border-collapse:separate; border-spacing:0 6px;">';
+    html += '<tr style="color:#888; font-size:12px; text-transform:uppercase;"><td style="padding:4px 12px;">Rank</td><td>Player</td><td>Avg/Q</td><td>Score</td><td>Total Time</td></tr>';
+    top3Speed.forEach((p, i) => {
+      const bg = i === 0 ? '#e8faf0' : i === 1 ? '#f8f8f8' : '#f0f8ff';
+      html += `<tr style="background:${bg};">`;
+      html += `<td style="padding:10px 12px; border-radius:8px 0 0 8px; font-size:20px;">${medals[i]}</td>`;
+      html += `<td style="padding:10px 8px; font-weight:600;">${p.name}</td>`;
+      html += `<td style="padding:10px 8px; font-weight:600; color:#2ecc71;">${p.avgTime.toFixed(1)}s</td>`;
+      html += `<td style="padding:10px 8px;">${p.score}/${p.total}</td>`;
+      html += `<td style="padding:10px 12px; border-radius:0 8px 8px 0; color:#888;">${formatTime(p.totalTime)}</td>`;
+      html += '</tr>';
+    });
+    html += '</table>';
+  }
+  html += '</div>';
+  
+  // All players table
+  if(allPlayers.length > 3) {
+    html += '<div style="margin-top:24px; border-top:1px solid #eee; padding-top:16px;">';
+    html += '<h3 style="font-size:14px; color:#888; margin-bottom:10px;">All Players</h3>';
+    html += '<table style="width:100%; font-size:13px; border-collapse:separate; border-spacing:0 4px;">';
+    byScore.forEach((p, i) => {
+      html += `<tr style="background:${i%2===0?'#fafafa':'white'};">`;
+      html += `<td style="padding:8px 12px;">${i+1}</td>`;
+      html += `<td style="padding:8px;">${p.name}</td>`;
+      html += `<td style="padding:8px;">${p.score}/${p.total}</td>`;
+      html += `<td style="padding:8px;">${formatTime(p.totalTime)}</td>`;
+      html += `<td style="padding:8px; color:#888;">${p.avgTime.toFixed(1)}s/q</td>`;
+      html += '</tr>';
+    });
+    html += '</table></div>';
+  }
+  
+  content.innerHTML = html;
+}
+
+function newPlayer() {
+  document.getElementById('results-card').classList.add('hidden');
+  document.getElementById('leaderboard-card').classList.add('hidden');
+  document.getElementById('quiz-section').classList.add('hidden');
+  document.getElementById('name-card').classList.remove('hidden');
+  document.getElementById('player-name').value = '';
+  document.getElementById('player-name').style.borderColor = '#e8e8e8';
+}
+
+function resetAll() {
+  if(confirm('This will clear all player scores. Are you sure?')) {
+    allPlayers = [];
+    localStorage.removeItem('iep_trivia_players');
+    newPlayer();
+  }
+}
+</script>
+</body>
+</html>
