@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>IEP Trivia — Live Leaderboard</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); min-height: 100vh; padding: 30px; color: white; }
+.container { max-width: 800px; margin: 0 auto; }
+.header { text-align: center; margin-bottom: 30px; }
+.header h1 { font-size: 36px; margin-bottom: 8px; }
+.header p { font-size: 16px; opacity: 0.7; }
+.card { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 28px; margin-bottom: 24px; border: 1px solid rgba(255,255,255,0.1); }
+.card h2 { font-size: 20px; margin-bottom: 16px; }
+.player-row { display: flex; align-items: center; padding: 12px 16px; border-radius: 10px; margin-bottom: 8px; }
+.player-row.gold { background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,215,0,0.05)); border: 1px solid rgba(255,215,0,0.3); }
+.player-row.silver { background: linear-gradient(135deg, rgba(192,192,192,0.15), rgba(192,192,192,0.05)); border: 1px solid rgba(192,192,192,0.2); }
+.player-row.bronze { background: linear-gradient(135deg, rgba(205,127,50,0.15), rgba(205,127,50,0.05)); border: 1px solid rgba(205,127,50,0.2); }
+.player-row.normal { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); }
+.rank { font-size: 24px; width: 50px; text-align: center; }
+.name { flex: 1; font-size: 16px; font-weight: 600; }
+.score { font-size: 16px; width: 80px; text-align: center; }
+.time { font-size: 14px; width: 80px; text-align: center; opacity: 0.7; }
+.stats { display: flex; gap: 20px; justify-content: center; margin-bottom: 30px; }
+.stat { text-align: center; padding: 16px 24px; background: rgba(255,255,255,0.05); border-radius: 12px; }
+.stat .num { font-size: 28px; font-weight: 700; color: #667eea; }
+.stat .label { font-size: 12px; opacity: 0.6; margin-top: 4px; }
+.refresh-note { text-align: center; font-size: 13px; opacity: 0.5; margin-top: 20px; }
+.empty { text-align: center; padding: 40px; opacity: 0.5; font-size: 16px; }
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<h1>🏆 IEP Trivia — Live Leaderboard</h1>
+<p>Scores update in real-time as players finish</p>
+</div>
+<div class="stats" id="stats">
+<div class="stat"><div class="num" id="total-players">0</div><div class="label">Players</div></div>
+<div class="stat"><div class="num" id="avg-score">-</div><div class="label">Avg Score</div></div>
+<div class="stat"><div class="num" id="avg-time">-</div><div class="label">Avg Time/Q</div></div>
+</div>
+<div class="card">
+<h2>🥇 Most Correct Answers</h2>
+<div id="accuracy-board"><div class="empty">Waiting for players to finish...</div></div>
+</div>
+<div class="card">
+<h2>⚡ Fastest Responders <span style="font-size:13px; opacity:0.6;">(min 50% correct to qualify)</span></h2>
+<div id="speed-board"><div class="empty">Waiting for qualified players...</div></div>
+</div>
+<div class="card">
+<h2>📋 All Players</h2>
+<div id="all-players"><div class="empty">Waiting for players...</div></div>
+</div>
+<div class="refresh-note">Auto-refreshes every 3 seconds</div>
+</div>
+<script>
+const dbUrl = "https://iep-trivia-default-rtdb.europe-west1.firebasedatabase.app/scores.json";
+const medals = ['🥇', '🥈', '🥉'];
+
+function renderRow(player, rank, style) {
+  const medal = rank <= 3 ? medals[rank-1] : rank;
+  const cls = rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : 'normal';
+  return `<div class="player-row ${style || cls}">
+    <div class="rank">${medal}</div>
+    <div class="name">${player.name}</div>
+    <div class="score">${player.score}/${player.total}</div>
+    <div class="time">${player.avgTime}s/q</div>
+  </div>`;
+}
+
+function fetchAndRender() {
+  fetch(dbUrl).then(r => r.json()).then(data => {
+    if (!data) return;
+    const players = Object.values(data);
+    
+    // Stats
+    document.getElementById('total-players').textContent = players.length;
+    const avgS = (players.reduce((a,p) => a + p.score, 0) / players.length).toFixed(1);
+    document.getElementById('avg-score').textContent = avgS + '/' + (players[0]?.total || 33);
+    const avgT = (players.reduce((a,p) => a + p.avgTime, 0) / players.length).toFixed(1);
+    document.getElementById('avg-time').textContent = avgT + 's';
+
+    // Top accuracy (tiebreak by time)
+    const byAccuracy = [...players].sort((a,b) => b.score - a.score || a.avgTime - b.avgTime);
+    let html = '';
+    byAccuracy.slice(0, 5).forEach((p, i) => { html += renderRow(p, i+1); });
+    document.getElementById('accuracy-board').innerHTML = html || '<div class="empty">No scores yet</div>';
+
+    // Top speed (min 50% correct)
+    const qualified = players.filter(p => p.score >= p.total * 0.5);
+    const bySpeed = [...qualified].sort((a,b) => a.avgTime - b.avgTime);
+    let html2 = '';
+    bySpeed.slice(0, 5).forEach((p, i) => { html2 += renderRow(p, i+1); });
+    document.getElementById('speed-board').innerHTML = html2 || '<div class="empty">No qualified players yet</div>';
+
+    // All players
+    let html3 = '';
+    byAccuracy.forEach((p, i) => { html3 += renderRow(p, i+1, 'normal'); });
+    document.getElementById('all-players').innerHTML = html3;
+  }).catch(() => {});
+}
+
+fetchAndRender();
+setInterval(fetchAndRender, 3000);
+</script>
+</body>
+</html>

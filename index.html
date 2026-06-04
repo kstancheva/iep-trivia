@@ -46,7 +46,7 @@ body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, 
 <div class="container">
 <div class="header">
 <h1>🧠 IEP Team Trivia</h1>
-<p>How well do you know our teams? 32 questions across all IEP pillars!</p>
+<p>How well do you know our teams? 33 questions across all IEP pillars!</p>
 </div>
 <!-- NAME ENTRY -->
 <div class="card" id="name-card">
@@ -87,7 +87,7 @@ body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, 
 <div style="font-size:16px; color:#555; margin-bottom:8px;" id="final-message"></div>
 <div style="font-size:14px; color:#888; margin-bottom:24px;" id="final-time"></div>
 <button class="btn" onclick="finishAndShowLeaderboard()">See My History</button>
-<button class="btn" style="background:linear-gradient(135deg,#f39c12,#e67e22); margin-left:10px;" onclick="submitScoreToForm()">📊 Submit Score</button>
+<button class="btn" style="background:linear-gradient(135deg,#f39c12,#e67e22); margin-left:10px;" onclick="submitScoreToForm()">🏆 Submit to Leaderboard</button>
 <button class="btn" style="background:linear-gradient(135deg,#5b8def,#4a6cf7); margin-left:10px;" onclick="copyScore()">📋 Copy My Score</button>
 <button class="btn" style="background:linear-gradient(135deg,#2ecc71,#27ae60); margin-left:10px;" onclick="newPlayer()">Next Player →</button>
 <div id="submit-confirmation" style="margin-top:12px; font-size:13px; color:#2ecc71; display:none;">✅ Score submitted! Your result will appear on the shared leaderboard.</div>
@@ -431,11 +431,29 @@ function copyScore() {
 }
 
 function submitScoreToForm() {
-  const formUrl = "https://forms.office.com/Pages/ResponsePage.aspx?id=ShCAUi1HOEWczx4dDv6LG2VPmlP2KwxIhA672jfVM2ZUQ1NDNUtNVkIzMVg5MUhTQTVGMk9BWjFQTi4u";
-  const params = new URLSearchParams();
-  const url = formUrl + "&Name=" + encodeURIComponent(currentPlayer) + "&Score=" + encodeURIComponent(score + "/" + questions.length) + "&Total=" + encodeURIComponent(questions.length) + "&AvgTime=" + encodeURIComponent((totalTime / questions.length).toFixed(1) + "s");
-  window.open(formUrl, '_blank');
-  document.getElementById('submit-confirmation').style.display = 'block';
+  // Auto-submit to Firebase
+  const dbUrl = "https://iep-trivia-default-rtdb.europe-west1.firebasedatabase.app/scores.json";
+  const avgTime = (totalTime / questions.length).toFixed(1);
+  const payload = {
+    name: currentPlayer,
+    score: score,
+    total: questions.length,
+    avgTime: parseFloat(avgTime),
+    totalTime: Math.round(totalTime),
+    timestamp: new Date().toISOString()
+  };
+  fetch(dbUrl, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(payload)
+  }).then(() => {
+    document.getElementById('submit-confirmation').style.display = 'block';
+    document.getElementById('submit-confirmation').textContent = '✅ Score submitted to the live leaderboard!';
+  }).catch(() => {
+    document.getElementById('submit-confirmation').style.display = 'block';
+    document.getElementById('submit-confirmation').textContent = '⚠️ Could not submit — check your connection and try again.';
+    document.getElementById('submit-confirmation').style.color = '#e67e22';
+  });
 }
 
 function backToResults() {
