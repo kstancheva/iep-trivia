@@ -87,7 +87,12 @@ body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, 
 <div style="font-size:16px; color:#555; margin-bottom:8px;" id="final-message"></div>
 <div style="font-size:14px; color:#888; margin-bottom:24px;" id="final-time"></div>
 <button class="btn" onclick="finishAndShowLeaderboard()">See Leaderboard →</button>
+<button class="btn" style="background:linear-gradient(135deg,#f39c12,#e67e22); margin-left:10px;" onclick="submitScoreToForm()">📊 Submit Score</button>
+<button class="btn" style="background:linear-gradient(135deg,#5b8def,#4a6cf7); margin-left:10px;" onclick="copyScore()">📋 Copy My Score</button>
 <button class="btn" style="background:linear-gradient(135deg,#2ecc71,#27ae60); margin-left:10px;" onclick="newPlayer()">Next Player →</button>
+<div id="submit-confirmation" style="margin-top:12px; font-size:13px; color:#2ecc71; display:none;">✅ Score submitted! Your result will appear on the shared leaderboard.</div>
+<div id="copy-confirmation" style="margin-top:12px; font-size:13px; color:#5b8def; display:none;">📋 Copied! Paste into the form fields: Name | Score | Total | Avg Time</div>
+<div id="score-preview" style="margin-top:10px; padding:10px 14px; background:#f0f4ff; border-radius:8px; font-size:13px; font-family:monospace; display:none; color:#333;"></div>
 </div>
 <!-- Individual tracker summary -->
 <div class="tracker" style="margin-top:30px;">
@@ -412,6 +417,24 @@ function renderLeaderboard() {
   }
   
   content.innerHTML = html;
+}
+
+function copyScore() {
+  const avgTime = (totalTime / questions.length).toFixed(1);
+  const scoreText = currentPlayer + " | " + score + "/" + questions.length + " | " + avgTime + "s avg";
+  navigator.clipboard.writeText(scoreText).then(() => {
+    document.getElementById('copy-confirmation').style.display = 'block';
+    document.getElementById('score-preview').style.display = 'block';
+    document.getElementById('score-preview').textContent = scoreText;
+  });
+}
+
+function submitScoreToForm() {
+  const formUrl = "https://forms.office.com/Pages/ResponsePage.aspx?id=ShCAUi1HOEWczx4dDv6LG2VPmlP2KwxIhA672jfVM2ZUQ1NDNUtNVkIzMVg5MUhTQTVGMk9BWjFQTi4u";
+  const params = new URLSearchParams();
+  const url = formUrl + "&Name=" + encodeURIComponent(currentPlayer) + "&Score=" + encodeURIComponent(score + "/" + questions.length) + "&Total=" + encodeURIComponent(questions.length) + "&AvgTime=" + encodeURIComponent((totalTime / questions.length).toFixed(1) + "s");
+  window.open(formUrl, '_blank');
+  document.getElementById('submit-confirmation').style.display = 'block';
 }
 
 function newPlayer() {
