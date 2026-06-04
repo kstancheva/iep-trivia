@@ -5,11 +5,17 @@
 <title>IEP Team Trivia Quiz</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 30px; }
+body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 30px; padding-bottom: 80px; }
 .container { max-width: 800px; margin: 0 auto; }
 .header { text-align: center; color: white; margin-bottom: 30px; }
 .header h1 { font-size: 32px; margin-bottom: 8px; }
 .header p { font-size: 16px; opacity: 0.9; }
+.countdown-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.85); padding: 14px 24px; display: flex; justify-content: center; align-items: center; gap: 12px; z-index: 1000; }
+.countdown-bar .time-left { font-size: 18px; font-weight: 700; color: #2ecc71; }
+.countdown-bar .time-left.warning { color: #f39c12; }
+.countdown-bar .time-left.urgent { color: #e74c3c; animation: pulse 1s infinite; }
+.countdown-bar .label { font-size: 13px; color: #aaa; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
 .score-bar { background: rgba(255,255,255,0.15); border-radius: 12px; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; color: white; margin-bottom: 20px; font-size: 14px; }
 .score-bar .progress { font-weight: 600; }
 .timer-display { font-size: 13px; opacity: 0.9; }
@@ -176,6 +182,40 @@ function shuffle(arr) {
   return arr;
 }
 
+let countdownInterval;
+const QUIZ_TIME_LIMIT = 20 * 60; // 20 minutes in seconds
+let timeRemaining = QUIZ_TIME_LIMIT;
+
+function startCountdown() {
+  timeRemaining = QUIZ_TIME_LIMIT;
+  document.getElementById('countdown-bar').classList.remove('hidden');
+  updateCountdownDisplay();
+  countdownInterval = setInterval(() => {
+    timeRemaining--;
+    updateCountdownDisplay();
+    if(timeRemaining <= 0) {
+      clearInterval(countdownInterval);
+      // Auto-end the quiz
+      showResults();
+    }
+  }, 1000);
+}
+
+function updateCountdownDisplay() {
+  const min = Math.floor(timeRemaining / 60);
+  const sec = timeRemaining % 60;
+  const display = document.getElementById('countdown-display');
+  display.textContent = `${min}:${sec.toString().padStart(2, '0')}`;
+  display.className = 'time-left';
+  if(timeRemaining <= 60) display.classList.add('urgent');
+  else if(timeRemaining <= 300) display.classList.add('warning');
+}
+
+function stopCountdown() {
+  clearInterval(countdownInterval);
+  document.getElementById('countdown-bar').classList.add('hidden');
+}
+
 function startQuiz() {
   const name = document.getElementById('player-name').value.trim();
   if(!name) { document.getElementById('player-name').style.borderColor = '#e74c3c'; return; }
@@ -189,6 +229,7 @@ function startQuiz() {
   document.getElementById('name-card').classList.add('hidden');
   document.getElementById('quiz-section').classList.remove('hidden');
   document.getElementById('tracker-list').innerHTML = '';
+  startCountdown();
   loadQuestion();
 }
 
@@ -280,6 +321,7 @@ function nextQuestion() {
 
 function showResults() {
   clearInterval(timerInterval);
+  stopCountdown();
   totalTime = (Date.now() - quizStartTime) / 1000;
   const avgTime = totalTime / questions.length;
   
@@ -471,5 +513,11 @@ function resetAll() {
   }
 }
 </script>
+<!-- COUNTDOWN BAR -->
+<div class="countdown-bar hidden" id="countdown-bar">
+<span class="label">⏱️ Time remaining:</span>
+<span class="time-left" id="countdown-display">20:00</span>
+</div>
+
 </body>
 </html>
