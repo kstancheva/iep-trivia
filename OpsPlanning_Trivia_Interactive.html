@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Operations Planning Team - Pop Culture Trivia - Adjacencies Fun</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; font-family:'Segoe UI',system-ui,sans-serif;
+    background:linear-gradient(135deg,#667eea,#764ba2); color:#2d2d2d; display:flex; align-items:flex-start; justify-content:center; padding:24px; }
+  .card { background:#fff; border-radius:18px; box-shadow:0 12px 45px rgba(0,0,0,.22); width:100%; max-width:640px; padding:30px 34px; margin-top:12px; }
+  h1 { font-size:24px; color:#4a2d6b; margin:0 0 4px; }
+  .sub { color:#7a7a95; font-size:14px; margin-bottom:22px; }
+  input[type=text]{ width:100%; padding:13px 15px; font-size:16px; border:2px solid #e0d8f0; border-radius:10px; outline:none; }
+  input[type=text]:focus{ border-color:#764ba2; }
+  button.primary{ margin-top:18px; width:100%; padding:14px; font-size:16px; font-weight:700; color:#fff; border:none; border-radius:10px;
+    background:linear-gradient(135deg,#667eea,#764ba2); cursor:pointer; }
+  button.primary:hover{ opacity:.92; }
+  .topbar{ display:flex; justify-content:space-between; align-items:center; font-size:13px; color:#666; margin-bottom:8px; }
+  .timer{ font-weight:700; color:#764ba2; }
+  .timer.warn{ color:#e74c3c; }
+  .bar{ height:8px; background:#eee; border-radius:6px; overflow:hidden; margin-bottom:20px; }
+  .bar > div{ height:100%; background:linear-gradient(90deg,#667eea,#764ba2); width:0%; transition:width .3s; }
+  .round{ display:inline-block; font-size:12px; font-weight:700; color:#764ba2; background:#f1ecfb; padding:4px 10px; border-radius:20px; margin-bottom:10px; }
+  .q{ font-size:19px; font-weight:600; margin:6px 0 18px; line-height:1.4; }
+  .opt{ display:block; width:100%; text-align:left; padding:14px 16px; margin-bottom:10px; font-size:15px; border:2px solid #e6e6ef;
+    border-radius:12px; background:#fff; cursor:pointer; transition:.15s; }
+  .opt:hover{ border-color:#764ba2; background:#faf8ff; }
+  .opt.correct{ border-color:#2ecc71; background:#e9faf1; }
+  .opt.wrong{ border-color:#e74c3c; background:#fdeceb; }
+  .opt:disabled{ cursor:default; }
+  .note{ font-size:14px; color:#555; background:#f6f4fc; border-left:4px solid #764ba2; padding:12px 14px; border-radius:8px; margin-top:6px; display:none; }
+  .next{ margin-top:16px; }
+  .score-big{ font-size:52px; font-weight:800; color:#667eea; text-align:center; margin:14px 0 4px; }
+  .center{ text-align:center; }
+  .muted{ color:#888; font-size:13px; }
+  .copybox{ margin-top:14px; padding:12px 14px; background:#f0f4ff; border-radius:10px; font-family:monospace; font-size:14px; text-align:center; }
+  .row{ display:flex; gap:10px; }
+  .row button{ flex:1; }
+  button.ghost{ background:#fff; color:#764ba2; border:2px solid #764ba2; border-radius:10px; padding:12px; font-weight:700; cursor:pointer; }
+  ol.lb{ padding-left:20px; } ol.lb li{ margin:4px 0; }
+</style>
+</head>
+<body>
+<div class="card" id="app"></div>
+
+<script>
+const QUESTIONS = [
+  {round:"🎬 Movies & TV", q:'Which sci-fi saga is famous for the line "May the Force be with you"?', options:["Star Wars","Star Trek","Guardians of the Galaxy","Dune"], answer:"Star Wars"},
+  {round:"🎬 Movies & TV", q:'Which Netflix series features a parallel world called the "Upside Down"?', options:["Stranger Things","Dark","Wednesday","The OA"], answer:"Stranger Things"},
+  {round:"🎬 Movies & TV 🔥", q:"Who directed the 2010 sci-fi thriller Inception?", options:["Christopher Nolan","Denis Villeneuve","Ridley Scott","David Fincher"], answer:"Christopher Nolan"},
+  {round:"🎬 Movies & TV", q:"Which film series follows a wizard boy at Hogwarts?", options:["Harry Potter","Percy Jackson","Narnia","The Hobbit"], answer:"Harry Potter"},
+
+  {round:"📺 TV Shows", q:"In Friends, what is the name of the coffee house where the gang hangs out?", options:["Central Perk","The Grind","Café Nervosa","Luke's Diner"], answer:"Central Perk"},
+  {round:"📺 TV Shows", q:"In Friends, what is Ross Geller's profession?", options:["Paleontologist","Chef","Actor","Lawyer"], answer:"Paleontologist"},
+  {round:"📺 TV Shows", q:"In Friends, which character has an identical twin sister named Ursula?", options:["Phoebe","Rachel","Monica","Janice"], answer:"Phoebe"},
+  {round:"📺 TV Shows", q:"In The Office, what is the name of Dwight's farm (and bed & breakfast)?", options:["Schrute Farms","Beet Haven","Dunder Acres","Sprecklesville"], answer:"Schrute Farms"},
+  {round:"📺 TV Shows 🔥", q:"In The Office, which company acquires Dunder Mifflin in later seasons?", options:["Sabre","Staples","Prince Family Paper","Michael Scott Paper Company"], answer:"Sabre"},
+
+  {round:"🎵 Music", q:'Which British band recorded "Bohemian Rhapsody"?', options:["Queen","The Beatles","Oasis","Led Zeppelin"], answer:"Queen"},
+  {round:"🎵 Music", q:'Which K-pop group released the hit "Dynamite"?', options:["BTS","BLACKPINK","EXO","TWICE"], answer:"BTS"},
+  {round:"🎵 Music 🔥", q:'Which Italian composer wrote "The Four Seasons"?', options:["Vivaldi","Mozart","Bach","Beethoven"], answer:"Vivaldi"},
+  {round:"🎵 Music", q:'Finish the ABBA lyric: "Mamma Mia, here I go ___"', options:["again","once more","crazy","dancing"], answer:"again"},
+  {round:"🎵 Music 🔥", q:'Which band recorded the 1973 album "The Dark Side of the Moon"?', options:["Pink Floyd","The Who","The Doors","Genesis"], answer:"Pink Floyd"},
+
+  {round:"😀 Guess the Emoji", q:"Name the movie:  🦁👑", options:["The Lion King","Madagascar","The Jungle Book","Zootopia"], answer:"The Lion King"},
+  {round:"😀 Guess the Emoji", q:"Name the movie:  👽📞🏠", options:["E.T. the Extra-Terrestrial","Alien","Arrival","Signs"], answer:"E.T. the Extra-Terrestrial"},
+  {round:"😀 Guess the Emoji 🔥", q:"Name the movie:  🕰️🏨🎩", options:["The Grand Budapest Hotel","The Menu","Chef","Ratatouille"], answer:"The Grand Budapest Hotel"},
+  {round:"😀 Guess the Emoji", q:"Name the movie:  💍🌋🧙‍♂️", options:["The Lord of the Rings","The Hobbit","Willow","Eragon"], answer:"The Lord of the Rings"},
+  {round:"😀 Guess the Emoji 🔥", q:"Name the movie:  🧑‍🚀🥔🔴", options:["The Martian","Interstellar","Gravity","Apollo 13"], answer:"The Martian"},
+
+  {round:"🌍 Around the World", q:"In which country did pizza (the Margherita) originate?", options:["Italy","Greece","Spain","France"], answer:"Italy"},
+  {round:"🌍 Around the World", q:"Currywurst is a classic street food from which country?", options:["Germany","Austria","Belgium","Netherlands"], answer:"Germany"},
+  {round:"🌍 Around the World 🔥", q:"Which is the smallest country in the world by area?", options:["Vatican City","Monaco","San Marino","Nauru"], answer:"Vatican City"},
+  {round:"🌍 Around the World", q:"Which three countries co-host the 2026 FIFA World Cup?", options:["USA, Canada & Mexico","Spain, Portugal & Morocco","Brazil & Argentina","Qatar"], answer:"USA, Canada & Mexico"},
+  {round:"🌍 Around the World 🔥", q:"Mount Kilimanjaro, Africa's highest peak, is in which country?", options:["Tanzania","Kenya","Ethiopia","Morocco"], answer:"Tanzania"}
+];
+const TIME_LIMIT = 20*60; // seconds
+
+let name="", idx=0, score=0, answered=false, startTime=0, timeLeft=TIME_LIMIT, timerId=null, order=[];
+const app = document.getElementById('app');
+
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+function fmt(s){ const m=Math.floor(s/60), r=s%60; return m+":"+String(r).padStart(2,'0'); }
+
+function startScreen(){
+  app.innerHTML = `
+    <h1>🎉 Operations Planning Team — Pop Culture Trivia — Adjacencies Fun</h1>
+    <div class="sub">24 questions · 20-minute timer · 5 rounds. Answer fast, have fun!</div>
+    <label class="muted">Enter your name to begin</label>
+    <input type="text" id="nm" placeholder="Your name" autocomplete="off">
+    <button class="primary" id="go">Start the quiz →</button>
+    <div id="hist"></div>`;
+  document.getElementById('go').onclick = ()=>{
+    const v=document.getElementById('nm').value.trim();
+    if(!v){ document.getElementById('nm').focus(); return; }
+    name=v; order=shuffle(QUESTIONS.map((_,i)=>i)); idx=0; score=0; startTime=Date.now(); timeLeft=TIME_LIMIT;
+    timerId=setInterval(tick,1000); render();
+  };
+  document.getElementById('nm').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('go').click(); });
+  renderHistory();
+}
+function renderHistory(){
+  const h=JSON.parse(localStorage.getItem('opsTrivia')||'[]');
+  if(!h.length) return;
+  const el=document.getElementById('hist');
+  el.innerHTML = `<div style="margin-top:22px"><div class="muted" style="margin-bottom:6px">🏆 This device's recent scores</div><ol class="lb">`+
+    h.slice(-5).reverse().map(r=>`<li>${r.name} — <b>${r.score}/20</b> · ${r.avg}s avg</li>`).join('')+`</ol></div>`;
+}
+function tick(){ timeLeft--; if(timeLeft<=0){ timeLeft=0; finish(); return; } const t=document.getElementById('tm'); if(t){ t.textContent="⏱️ "+fmt(timeLeft); t.className="timer"+(timeLeft<=60?" warn":""); } }
+
+function render(){
+  const qi=order[idx], item=QUESTIONS[qi]; answered=false;
+  const opts=shuffle(item.options);
+  const pct=Math.round((idx)/order.length*100);
+  app.innerHTML = `
+    <div class="topbar"><span>Question ${idx+1} of ${order.length}</span><span>Score: <b>${score}</b></span><span class="timer" id="tm">⏱️ ${fmt(timeLeft)}</span></div>
+    <div class="bar"><div style="width:${pct}%"></div></div>
+    <div class="round">${item.round}</div>
+    <div class="q">${item.q}</div>
+    <div id="opts">`+opts.map(o=>`<button class="opt">${o}</button>`).join('')+`</div>
+    <div class="note" id="note"></div>
+    <button class="primary next" id="next" style="display:none">${idx+1<order.length?'Next question →':'See my results 🏆'}</button>`;
+  document.querySelectorAll('.opt').forEach(b=>{ b.onclick=()=>choose(b,item); });
+  document.getElementById('next').onclick=()=>{ idx++; (idx<order.length)?render():finish(); };
+}
+function choose(btn,item){
+  if(answered) return; answered=true;
+  const chosen=btn.textContent;
+  document.querySelectorAll('.opt').forEach(b=>{
+    b.disabled=true;
+    if(b.textContent===item.answer) b.classList.add('correct');
+    else if(b===btn) b.classList.add('wrong');
+  });
+  if(chosen===item.answer) score++;
+  const note=document.getElementById('note');
+  note.style.display='block';
+  note.innerHTML = (chosen===item.answer?"✅ Correct!":"❌ Not quite — it's <b>"+item.answer+"</b>.");
+  document.getElementById('next').style.display='block';
+}
+function finish(){
+  clearInterval(timerId);
+  const elapsed=Math.round((Date.now()-startTime)/1000);
+  const answeredCount=Math.min(idx+(answered?1:0),order.length)||1;
+  const avg=(elapsed/order.length).toFixed(1);
+  const pct=Math.round(score/order.length*100);
+  let msg = pct>=90?"🌟 Pop culture legend!":pct>=70?"🎬 Great knowledge!":pct>=50?"👍 Solid effort!":"😄 Thanks for playing!";
+  const h=JSON.parse(localStorage.getItem('opsTrivia')||'[]'); h.push({name,score,avg}); localStorage.setItem('opsTrivia',JSON.stringify(h));
+  const line = `${name} | ${score}/${order.length} | ${avg}s avg`;
+  app.innerHTML = `
+    <h1 class="center">🎉 Quiz Complete!</h1>
+    <div class="score-big">${score} / ${order.length} (${pct}%)</div>
+    <div class="center" style="font-size:16px;color:#555">${name} — ${msg}</div>
+    <div class="center muted" style="margin-top:6px">⏱️ Total time: ${fmt(elapsed)} · Avg ${avg}s / question</div>
+    <div class="copybox" id="cb">${line}</div>
+    <div class="row" style="margin-top:16px">
+      <button class="ghost" id="copy">📋 Copy my score</button>
+      <button class="primary" style="margin-top:0" id="again">Play again</button>
+    </div>
+    <div class="muted center" style="margin-top:14px">Paste your score into the team chat for the leaderboard!</div>
+    <div id="hist"></div>`;
+  document.getElementById('copy').onclick=()=>{ navigator.clipboard.writeText(line).then(()=>{ document.getElementById('copy').textContent='✓ Copied!'; }); };
+  document.getElementById('again').onclick=startScreen;
+  renderHistory();
+}
+startScreen();
+</script>
+</body>
+</html>
