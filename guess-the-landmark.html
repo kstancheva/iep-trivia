@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guess the Landmark — Operations Planning Team</title>
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; font-family:'Segoe UI',system-ui,sans-serif; background:#0f1226; color:#f2f3f9;
+    display:flex; align-items:center; justify-content:center; padding:20px; }
+  .wrap { width:100%; max-width:1000px; text-align:center; }
+  h1 { font-size:30px; margin:0 0 8px; background:linear-gradient(90deg,#8ab4ff,#c99bff); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .sub { color:#9aa3c7; font-size:15px; margin-bottom:26px; line-height:1.5; }
+  .chip { display:inline-block; background:#1c2145; color:#a9b4e6; font-size:13px; font-weight:700; padding:6px 14px; border-radius:20px; margin-bottom:14px; }
+  button { font-family:inherit; cursor:pointer; border:none; border-radius:10px; font-weight:700; }
+  .primary { background:linear-gradient(135deg,#5b8def,#8a5bff); color:#fff; padding:14px 26px; font-size:16px; }
+  .primary:hover{ opacity:.92; }
+  .ghost { background:transparent; color:#c7cdf0; border:2px solid #3a4170; padding:11px 20px; font-size:15px; }
+  .ghost:hover{ border-color:#5b8def; }
+  .stage { background:#000; border-radius:14px; overflow:hidden; box-shadow:0 14px 50px rgba(0,0,0,.5); margin-bottom:16px; }
+  .stage img { display:block; width:100%; max-height:64vh; object-fit:contain; background:#000; }
+  .imgfail { padding:60px 20px; color:#ff9a9a; font-size:15px; }
+  .reveal { background:#161a38; border-radius:12px; padding:16px 20px; margin-bottom:16px; display:none; }
+  .reveal .name { font-size:24px; font-weight:800; color:#fff; }
+  .reveal .loc { font-size:16px; color:#8ab4ff; margin:2px 0 8px; }
+  .reveal .fact { font-size:14px; color:#c7cdf0; line-height:1.5; }
+  .controls { display:flex; gap:10px; justify-content:center; align-items:center; flex-wrap:wrap; }
+  .count { color:#9aa3c7; font-size:14px; margin-bottom:10px; }
+  .diffbadge { display:inline-block; padding:3px 12px; border-radius:20px; font-size:13px; font-weight:700; margin-left:8px; }
+  .d-easy { background:#183a2a; color:#7ee0a8; }
+  .d-medium { background:#3a341a; color:#f0d886; }
+  .d-hard { background:#3a1d1d; color:#ff9a9a; }
+  .foot { color:#6b7299; font-size:12px; margin-top:18px; }
+  .kbd { color:#8a92bd; font-size:12px; margin-top:8px; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<script>
+const LANDMARKS = [
+  {name:"Eiffel Tower", loc:"Paris, France", diff:"easy", file:"Tour Eiffel Wikimedia Commons.jpg", fact:"Built 1887–1889 by Gustave Eiffel's company; about 330 m tall."},
+  {name:"Statue of Liberty", loc:"New York City, USA", diff:"easy", file:"Front view of Statue of Liberty (cropped).jpg", fact:"A gift from the people of France, dedicated in 1886."},
+  {name:"Colosseum", loc:"Rome, Italy", diff:"easy", file:"Colosseo 2020.jpg", fact:"Completed in AD 80 — the largest amphitheatre ever built."},
+  {name:"Taj Mahal", loc:"Agra, India", diff:"easy", file:"Taj Mahal (Edited).jpeg", fact:"A marble mausoleum commissioned in 1631 by emperor Shah Jahan."},
+  {name:"Sydney Opera House", loc:"Sydney, Australia", diff:"easy", file:"Sydney Australia. (21339175489).jpg", fact:"Opened in 1973; a masterpiece of 20th-century architecture."},
+  {name:"Christ the Redeemer", loc:"Rio de Janeiro, Brazil", diff:"easy", file:"Christ the Redeemer - Cristo Redentor.jpg", fact:"A 30 m Art Deco statue completed in 1931."},
+  {name:"Great Wall of China", loc:"China", diff:"easy", file:"The Great Wall of China at Jinshanling-edit.jpg", fact:"The best-known sections were built by the Ming dynasty."},
+  {name:"Leaning Tower of Pisa", loc:"Pisa, Italy", diff:"easy", file:"Italy - Pisa - Leaning Tower.jpg", fact:"Famous for its nearly four-degree lean from an unstable foundation."},
+  {name:"Brandenburg Gate", loc:"Berlin, Germany", diff:"medium", file:"Brandenburger Tor abends.jpg", fact:"An 18th-century neoclassical monument, built 1788–1791."},
+  {name:"Sagrada Família", loc:"Barcelona, Spain", diff:"medium", file:"SF maig 2 cropped.jpg", fact:"Gaudí's basilica — under construction since 1882."},
+  {name:"Machu Picchu", loc:"Peru", diff:"medium", file:"Machu Picchu, 2023 (012).jpg", fact:"A 15th-century Inca citadel high in the Andes (2,430 m)."},
+  {name:"Golden Gate Bridge", loc:"San Francisco, USA", diff:"easy", file:"Golden Gate Bridge as seen from Battery East.jpg", fact:"Suspension bridge opened in 1937; a symbol of California."},
+  {name:"Big Ben (Elizabeth Tower)", loc:"London, UK", diff:"easy", file:"Elizabeth Tower and the north front of the Palace of Westminster, London.jpg", fact:"'Big Ben' is really the Great Bell; the tower was renamed Elizabeth Tower in 2012."},
+  {name:"Great Pyramid of Giza", loc:"Giza, Egypt", diff:"easy", file:"Great Pyramid of Giza - Pyramid of Khufu.jpg", fact:"The oldest of the Seven Wonders of the Ancient World, c. 2600 BC."},
+  {name:"Petra", loc:"Jordan", diff:"medium", file:"Al Deir Petra.JPG", fact:"The rock-cut 'Rose City' and a New 7 Wonders of the World."},
+  {name:"Mount Fuji", loc:"Japan", diff:"easy", file:"View of Mount Fuji from Ōwakudani 20211202.jpg", fact:"Japan's highest mountain at 3,776 m; an active stratovolcano."},
+  {name:"Burj Khalifa", loc:"Dubai, UAE", diff:"medium", file:"Burj Khalifa (worlds tallest building) and the Dubai skyline (25781049892).jpg", fact:"The world's tallest building at about 828 m (since 2010)."},
+  {name:"Parthenon (Acropolis)", loc:"Athens, Greece", diff:"medium", file:"The Parthenon in Athens.jpg", fact:"Temple to the goddess Athena and a symbol of ancient Greece."},
+  {name:"Neuschwanstein Castle", loc:"Bavaria, Germany", diff:"medium", file:"Schloss Neuschwanstein 2013.jpg", fact:"A 19th-century palace said to have inspired Disney's castle."},
+  {name:"Tower Bridge", loc:"London, UK", diff:"easy", file:"Tower Bridge at Dawn.jpg", fact:"Opened in 1894 — and often mistaken for London Bridge!"},
+  {name:"Chichén Itzá", loc:"Yucatán, Mexico", diff:"medium", file:"Chichen Itza 3.jpg", fact:"El Castillo pyramid, built by the Maya; a New 7 Wonders of the World."},
+  {name:"Angkor Wat", loc:"Siem Reap, Cambodia", diff:"medium", file:"Angkor Wat.jpg", fact:"The largest religious complex in the world; on Cambodia's flag."},
+  {name:"Stonehenge", loc:"Wiltshire, England", diff:"medium", file:"Stonehenge2007 07 30.jpg", fact:"A prehistoric stone circle aligned to the solstices."},
+  {name:"Saint Basil's Cathedral", loc:"Moscow, Russia", diff:"medium", file:"Saint Basil's Cathedral in Moscow.jpg", fact:"The colourful onion-domed church on Red Square, finished 1561."},
+  {name:"Hagia Sophia", loc:"Istanbul, Turkey", diff:"hard", file:"Hagia Sophia (228968325).jpeg", fact:"Completed AD 537; a church, then mosque, then museum, now a mosque."},
+  {name:"Marina Bay Sands", loc:"Singapore", diff:"medium", file:"Marina Bay Sands (I).jpg", fact:"Three towers topped by a ship-shaped SkyPark and infinity pool (2010)."},
+  {name:"Petronas Towers", loc:"Kuala Lumpur, Malaysia", diff:"medium", file:"Petronas Panorama II (4to3).jpg", fact:"The world's tallest twin towers; tallest buildings on Earth 1998–2004."},
+  {name:"Matterhorn", loc:"Switzerland / Italy", diff:"hard", file:"Matterhorn from Domhütte - 2.jpg", fact:"The near-symmetric Alpine peak (4,478 m) on the Swiss–Italian border."},
+  {name:"Moai (Easter Island)", loc:"Rapa Nui, Chile", diff:"medium", file:"AhuTongariki.JPG", fact:"Giant stone ancestor figures carved by the Rapa Nui people."},
+  {name:"Atomium", loc:"Brussels, Belgium", diff:"hard", file:"The Atomium during civil twilight (DSCF1135).jpg", fact:"Built for the 1958 World's Fair; shaped like an iron crystal, magnified 165 billion times."}
+];
+function imgURL(file){ return "https://commons.wikimedia.org/wiki/Special:FilePath/" + encodeURIComponent(file) + "?width=1280"; }
+function diffBadge(d){ const m={easy:['d-easy','🟢 Easy'],medium:['d-medium','🟡 Medium'],hard:['d-hard','🔴 Hard']}; const x=m[d]||m.medium; return `<span class="diffbadge ${x[0]}">${x[1]}</span>`; }
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+let order=[], idx=0, revealed=false;
+const app=document.getElementById('app');
+
+function start(){
+  app.innerHTML = `
+    <h1>📸 Guess the Landmark</h1>
+    <div class="sub">Operations Planning Team · 30 famous places around the world (easy to tricky!)<br>
+    I'll show a photo — <b>type your guess in the Zoom chat!</b> We reveal each answer together.</div>
+    <button class="primary" id="go">Start the slideshow →</button>
+    <div class="kbd">Tip while presenting: <b>Spacebar</b> = reveal answer · <b>→</b> = next photo</div>`;
+  document.getElementById('go').onclick=()=>{ order=shuffle(LANDMARKS.map((_,i)=>i)); idx=0; show(); };
+}
+function show(){
+  revealed=false;
+  const item=LANDMARKS[order[idx]];
+  app.innerHTML = `
+    <div class="chip">📍 Guess the Landmark</div>
+    <div class="count">Photo ${idx+1} of ${order.length} ${diffBadge(item.diff)}</div>
+    <div class="stage"><img id="pic" src="${imgURL(item.file)}" alt="Mystery landmark"
+       onerror="this.style.display='none';document.getElementById('imgfail').style.display='block';"></div>
+    <div class="imgfail" id="imgfail" style="display:none;">⚠️ Image didn't load. Skip to the next one, or check your connection.</div>
+    <div class="reveal" id="rev">
+      <div class="name">${item.name}</div>
+      <div class="loc">📍 ${item.loc}</div>
+      <div class="fact">${item.fact}</div>
+    </div>
+    <div class="controls">
+      <button class="ghost" id="prev">← Prev</button>
+      <button class="primary" id="revealBtn">Reveal answer 👀</button>
+      <button class="ghost" id="next">Next →</button>
+    </div>
+    <div class="kbd">Spacebar = reveal · → next · ← previous</div>
+    <div class="foot">Answers together in the chat! Photos: Wikimedia Commons.</div>`;
+  document.getElementById('revealBtn').onclick=doReveal;
+  document.getElementById('next').onclick=next;
+  document.getElementById('prev').onclick=prev;
+}
+function doReveal(){ revealed=true; document.getElementById('rev').style.display='block'; const b=document.getElementById('revealBtn'); if(b){ b.style.display='none'; } }
+function next(){ if(idx+1<order.length){ idx++; show(); } else { done(); } }
+function prev(){ if(idx>0){ idx--; show(); } }
+function done(){
+  app.innerHTML = `
+    <h1>🎉 That's a wrap!</h1>
+    <div class="sub">Nicely done — hope you racked up the points in the chat.<br>Tally the winner and celebrate the travel buffs!</div>
+    <button class="primary" id="again">Play again (reshuffle) →</button>`;
+  document.getElementById('again').onclick=()=>{ order=shuffle(LANDMARKS.map((_,i)=>i)); idx=0; show(); };
+}
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'){ e.preventDefault(); if(!revealed && document.getElementById('revealBtn')) doReveal(); else next(); }
+  else if(e.key==='ArrowRight'){ if(document.getElementById('next')) next(); }
+  else if(e.key==='ArrowLeft'){ if(document.getElementById('prev')) prev(); }
+});
+start();
+</script>
+</body>
+</html>
